@@ -1,0 +1,29 @@
+<idea-plugin>
+<id>my.SpringProject.PopupMenu.ButtonsForPopup.StartSpringApplication</id>
+<name>SimplePlugin</name>
+    <vendor>Danikto</vendor>
+    <actions>
+        <action class="my.SpringProject.PopupMenu.PopupMenuController"
+                id="SpringPopupMenu"
+                text="Spring application"
+                description="Show popup menu"
+                >
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+        </action>
+
+
+
+       <group id="ToolsMenuDolboeb">
+        <action id="my.SpringProject.PopupMenu.ButtonsForPopup.StartSpringApplication" class="my.SpringProject.PopupMenu.ButtonsForPopup.StartSpringApplication" text="StartSpringBoot">
+          <add-to-group group-id="ToolsMenu" anchor="last"/>
+       </action>
+           <action id="my.SpringProject.PopupMenu.ButtonsForPopup.StopSpringApplication" class="my.SpringProject.PopupMenu.ButtonsForPopup.StopSpringApplication" text="StopSpringBoot">
+              <add-to-group group-id="ToolsMenu" anchor="last"/>
+         </action>
+       </group>
+    </actions>
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow factoryClass="my.SpringProject.SyncMenu.SyncToolWindow" id="SyncTool" anchor="right"/>
+<!--        <toolWindow factoryClass="my.SpringProject.AnotherMenu.AnMenu" id="AnSyncMenu" anchor="right"/>-->
+    </extensions>
+</idea-plugin>
