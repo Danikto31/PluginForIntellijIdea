@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class Connecter {
 
     private static final String SERVER_URL = "http://localhost:8080/sync";
+    private static final String SERVER_WEBSOCKET_URL = "http://localhost:8080/sync/ws";
     private final OkHttpClient client = new OkHttpClient();
     private final Gson gson = new Gson();
 
