@@ -28,6 +28,10 @@ dependencies {
     implementation group: 'com.squareup.okhttp3', name: 'okhttp', version: '4.11.0'
 // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-web
     implementation group: 'org.springframework.boot', name: 'spring-boot-starter-web', version: '3.3.1'
+// https://mvnrepository.com/artifact/commons-io/commons-io
+    implementation group: 'commons-io', name: 'commons-io', version: '2.16.1'
+// https://mvnrepository.com/artifact/org.apache.commons/commons-compress
+    implementation group: 'org.apache.commons', name: 'commons-compress', version: '1.26.2'
 
 }
 

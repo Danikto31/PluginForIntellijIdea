@@ -1,15 +1,20 @@
 package my.SpringProject.SyncMenu;
 
+import com.intellij.ide.impl.ProjectUtil;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
+import com.intellij.openapi.fileChooser.FileChooserDescriptor;
+import com.intellij.openapi.fileChooser.FileChooserDialog;
+import com.intellij.openapi.fileChooser.FileChooserFactory;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.DumbAware;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
+import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowFactory;
@@ -19,9 +24,12 @@ import com.intellij.ui.content.ContentFactory;
 import com.intellij.ui.components.JBScrollPane;
 import my.SpringProject.DiffOfStringFiles.DifFinder;
 import org.jetbrains.annotations.NotNull;
+import my.SpringProject.ZipDownloadUnpack.ApacheZipper;
 
 import javax.swing.*;
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -34,6 +42,8 @@ public class SyncToolWindow implements ToolWindowFactory, DumbAware {
     private Editor Actualeditor;
     private VirtualFile Actualfile;
     private Project Actualproject;
+    private String PathToGitProject;
+    private Map<String,String> PathsList = new HashMap<>();
 
     public void getKeys(ConcurrentHashMap<String, String> map){
         list.clear();
@@ -41,6 +51,15 @@ public class SyncToolWindow implements ToolWindowFactory, DumbAware {
         while(iterator.hasNext()){
             list.add(iterator.next());
         }
+    }
+    public void setAllPaths(String DirectoryPath){
+        File[] file = new File(DirectoryPath).listFiles();
+        for(int i = 0; i< Objects.requireNonNull(file).length; ++i){
+            if(!file[i].isDirectory()){
+                PathsList.put(file[i].getName(), file[i].getAbsolutePath());
+            }else setAllPaths(file[i].getAbsolutePath());
+        }
+
     }
     private void SetActualProject(Project project){
         Actualproject = project;
@@ -73,7 +92,7 @@ public class SyncToolWindow implements ToolWindowFactory, DumbAware {
         JButton AutoSaveButton = new JButton("AutoSave");
         JButton AutoSyncButton = new JButton("AutoSync");
         JButton AutoMegaFuckingButton = new JButton("Auto");
-
+        JButton DownloadProject = new JButton("DownloadAndOpenProject");
 
         // Добавляем JList для отображения названий файлов
         DefaultListModel<String> listModel = new DefaultListModel<>();
@@ -103,14 +122,36 @@ public class SyncToolWindow implements ToolWindowFactory, DumbAware {
             }
         });
 
-        AutoMegaFuckingButton.addActionListener(e->{
-                    Actualeditor = FileEditorManager.getInstance(project).getSelectedTextEditor();
-                    if (Actualeditor == null) {
-                        Messages.showErrorDialog(project, "No editor is currently selected.", "Error");
-                        return;
+        DownloadProject.addActionListener(e ->{
+                PathToGitProject = Messages.showInputDialog(project,"Enter the path to zipFile to download","Download Project",Messages.getInformationIcon());
+            FileChooserDescriptor fileChooserDescriptor = new FileChooserDescriptor(false, true, false, false, false, false);
+            FileChooserDialog fileChooser = FileChooserFactory.getInstance().createFileChooser(fileChooserDescriptor, null, null);
+            VirtualFile[] files = fileChooser.choose(project);
+            new Task.Backgroundable(project,"Downloading zipFiles"){
+                @Override
+                public void run(@NotNull ProgressIndicator indicator) {
+                    try {
+                        File zipFile = ApacheZipper.DownloadZip(PathToGitProject,files);
+                        ApacheZipper.unzipFile(zipFile,files);
+
+                        VirtualFile virtualProjectFile = LocalFileSystem.getInstance().refreshAndFindFileByPath(files[0].getPath());
+                        if(virtualProjectFile!=null){
+                        ProjectUtil.openOrImport(virtualProjectFile.getPath(),project,false);
+                        setAllPaths(files[0].getPath());
+                            System.out.println(PathsList);
+                            ApplicationManager.getApplication().invokeLater(() ->
+                                    Messages.showInfoMessage("Successfully download", "Successfully"));
+
+                        }else {ApplicationManager.getApplication().invokeLater(() ->
+                                Messages.showInfoMessage("Cant find project by the path", "Error"));}
+                    } catch (IOException ex) {
+                        throw new RuntimeException(ex);
                     }
-                    Document document = Actualeditor.getDocument();
-                    Actualfile = Objects.requireNonNull(FileEditorManager.getInstance(project).getSelectedEditor()).getFile();
+                }
+                }.queue();
+        });
+
+        AutoMegaFuckingButton.addActionListener(e->{
                     if(!runningStatus){
                         String intervalStr = Messages.showInputDialog(project, "Enter the sync interval in milliseconds:", "AutoSave Interval", Messages.getQuestionIcon());
                         if (intervalStr != null && !intervalStr.isEmpty()){
@@ -120,8 +161,14 @@ public class SyncToolWindow implements ToolWindowFactory, DumbAware {
                                 scheduler.scheduleAtFixedRate(()->{
                                     if (runningStatus) {
                                         try {
-                                            refreshEditor();
-                                            refreshVirtualFile();
+                                            Actualeditor = FileEditorManager.getInstance(project).getSelectedTextEditor();
+                                            if (Actualeditor == null) {
+                                                Messages.showErrorDialog(project, "No editor is currently selected.", "Error");
+                                                return;
+                                            }
+                                            Document document = Actualeditor.getDocument();
+                                            Actualfile = Objects.requireNonNull(FileEditorManager.getInstance(project).getSelectedEditor()).getFile();
+
                                             String key = Actualfile.getName();
                                             String text = document.getText();
                                             ConcurrentHashMap<String,String> data = syncService.getData();
@@ -162,7 +209,7 @@ public class SyncToolWindow implements ToolWindowFactory, DumbAware {
                                                     });
                                                     latch.await();
                                                     DifFinder.setFileText(text);
-                                                }}
+                                                }}else syncService.updateData(key,text);
                                         }catch (IOException | InterruptedException ex) {
                                             throw new RuntimeException(ex);
                                         }
@@ -365,6 +412,7 @@ public class SyncToolWindow implements ToolWindowFactory, DumbAware {
         panel.add(contentScrollPane);
         panel.add(AutoSyncButton);
         panel.add(AutoMegaFuckingButton);
+        panel.add(DownloadProject);
         //Добавляем panel в toolWindow
         ContentFactory contentFactory = ContentFactory.getInstance();
         Content content = contentFactory.createContent(panel, "", false);
