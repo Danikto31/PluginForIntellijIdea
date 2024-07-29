@@ -16,10 +16,16 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Enumeration;
 public class ApacheZipper {
-
+    private static String fileName;
+    public static void setFileName(String name){
+        fileName = name;
+    }
+    public static String GetFileName(){
+        return fileName.substring(0,fileName.length()-1);
+    }
     public static File DownloadZip(String DpathToZip, VirtualFile[] files) throws IOException {
         String PathToDirectory = files[0].getPath();
-
+        System.out.println(PathToDirectory);
        URL url = new URL(DpathToZip);
        File dFile = new File(PathToDirectory,"project.zip");
 
@@ -34,10 +40,11 @@ public class ApacheZipper {
         String destinationDir = files[0].getPath();
         try (ZipFile zip = new ZipFile.Builder().setFile(zipFile).get()) {
             Enumeration<ZipArchiveEntry> entries = zip.getEntries();
+            int c=0;
             while (entries.hasMoreElements()) {
                 ZipArchiveEntry entry = entries.nextElement();
                 File outFile = new File(destinationDir, entry.getName());
-
+                if(c==0)setFileName(entry.getName());
                 if (entry.isDirectory()) {
                     FileUtils.forceMkdir(outFile);
                 } else {
@@ -47,6 +54,7 @@ public class ApacheZipper {
                         IOUtils.copy(is, fos);
                     }
                 }
+                ++c;
             }
         }
         Files.delete(Paths.get(zipFile.getPath()));

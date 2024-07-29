@@ -15,6 +15,36 @@ public final class Connecter {
     private final OkHttpClient client = new OkHttpClient();
     private final Gson gson = new Gson();
 
+    public void updatePathData(String key, String value) throws IOException{
+        UpdateRequestJson requestJson = new UpdateRequestJson(key,value);
+        String json = gson.toJson(requestJson);
+
+        RequestBody requestBody = RequestBody.create(json, MediaType.get("application/json"));
+
+        Request request = new Request.Builder()
+                .url(SERVER_URL + "/verifyPath")
+                .post(requestBody)
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                throw new IOException("Unexpected code " + response);
+            }
+        }
+    }
+    public ConcurrentHashMap<String, String> getPaths() throws IOException {
+        Request request = new Request.Builder()
+                .url(SERVER_URL + "/paths")
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                throw new IOException("Unexpected code " + response);
+            }
+
+            return new Gson().fromJson(response.body().string(), ConcurrentHashMap.class);
+        }
+    }
 
 
     public void updateData(String key, String value) throws IOException {
@@ -35,6 +65,7 @@ public final class Connecter {
         }
 
     }
+
 
     public ConcurrentHashMap<String, String> getData() throws IOException {
         Request request = new Request.Builder()
