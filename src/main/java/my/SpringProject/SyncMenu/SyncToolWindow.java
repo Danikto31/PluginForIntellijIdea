@@ -55,7 +55,9 @@ public class SyncToolWindow implements ToolWindowFactory, DumbAware {
     private void setProjectName(String ProjectName) {
         this.ProjectName = ProjectName;
     }
-
+    private ConcurrentHashMap<String,String> getPathMap() {
+        return PathMap;
+    }
 
 
 
@@ -169,8 +171,10 @@ public class SyncToolWindow implements ToolWindowFactory, DumbAware {
                                         assert PathMap != null;
                                         if(!PathMap.equals(syncService.getPaths())) {
                                                 ConcurrentHashMap<String,String> Map = syncService.getPaths();
+                                                ConcurrentHashMap<String,String> PMap = getPathMap();
                                                 PathMap.forEach((K, V) -> {
                                                     if(Map.get(K)!=null){
+                                                        PMap.remove(K);
                                                         Map.remove(K);
                                                     }
                                                 });
@@ -197,6 +201,14 @@ public class SyncToolWindow implements ToolWindowFactory, DumbAware {
                                                             throw new RuntimeException(ex);
                                                         }
 
+                                                    });
+                                                }else if(!PMap.isEmpty()){
+                                                    PMap.forEach((K,V)->{
+                                                        try {
+                                                            syncService.updatePathData(K,V);
+                                                        } catch (IOException ex) {
+                                                            throw new RuntimeException(ex);
+                                                        }
                                                     });
                                                 }
                                         }
